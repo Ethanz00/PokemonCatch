@@ -1,0 +1,663 @@
+﻿import random
+from queue import PriorityQueue
+from queue import LifoQueue
+from queue import Queue
+from itertools import permutations
+import heapq
+Pause=400
+Number_of_Pokemon = 6
+##################################################################
+#ALL REGIONS
+##################################################################
+#Region nodes
+bug=Node("Bug")
+electric=Node("Electric")
+fighting=Node("Fighting")
+fire=Node("Fire")
+grass=Node("Grass")
+ground=Node("Ground")
+normal=Node("Normal")
+poison=Node("Poison")
+psychic=Node("Psychic")
+rock=Node("Rock")
+water=Node("Water")
+flying=Node("Flying")
+other=Node("Other")
+#Region edges
+normal_ground=Edge(normal,ground,weight=1,directed=True)
+fire_psychic=Edge(fire,psychic,weight=3,directed=True)
+bug_fire=Edge(bug,fire,weight=4,directed=True)
+water_electric=Edge(water,electric,weight=4,directed=True)
+fighting_fire=Edge(fighting,fire,weight=1,directed=True)
+grass_poison=Edge(grass,poison,weight=1,directed=True)
+fire_rock=Edge(fire,rock,weight=3,directed=True)
+poison_psychic=Edge(poison,psychic,weight=1,directed=True)
+electric_fire=Edge(electric,fire,weight=2,directed=True)
+rock_water=Edge(rock,water,weight=1,directed=True)
+fighting_psychic=Edge(fighting,psychic,weight=4,directed=True)
+ground_psychic=Edge(ground,psychic,weight=1,directed=True)
+ground_bug=Edge(ground,bug,weight=2,directed=True)
+fighting_normal=Edge(fighting,normal,weight=1,directed=True)
+psychic_grass=Edge(psychic,grass,weight=4,directed=True)
+water_bug=Edge(water,bug,weight=3,directed=True)
+grass_fighting=Edge(grass,fighting,weight=2,directed=True)
+grass_fire=Edge(grass,fire,weight=2,directed=True)
+normal_water=Edge(normal,water,weight=4,directed=True)
+water_psychic=Edge(water,psychic,weight=1,directed=True)
+rock_flying=Edge(rock,flying,weight=3,directed=True)
+flying_electric=Edge(flying,electric,weight=2,directed=True)
+poison_flying=Edge(poison,flying,weight=2,directed=True)
+electric_other=Edge(electric,other,weight=2,directed=True)
+other_normal=Edge(other,normal,weight=2,directed=True)
+normal_fire=Edge(normal,fire,weight=4,directed=True)
+psychic_electric=Edge(psychic,electric,weight=4,directed=True)
+
+#Region edge and node lists and sets
+region_nodes=[other,flying,bug, electric, fighting, fire, grass, ground, normal, poison, psychic, rock, water]
+region_set={"Other","Flying","Bug","Electric","Fighting","Fire","Grass","Ground","Normal","Poison","Psychic","Water","Rock"}
+region_list=list(region_set)
+region_edges=[poison_flying,other_normal,electric_other,flying_electric,rock_flying,fire_psychic, bug_fire, water_electric, fighting_fire, fire_rock, poison_psychic, normal_ground, electric_fire, rock_water, fighting_psychic, ground_psychic, ground_bug, fighting_normal, psychic_grass, water_bug, grass_fighting, grass_poison, grass_fire, normal_water, water_psychic, normal_fire]
+region_all=region_nodes+region_edges
+
+#graph.add_all(region_all) # Create region graph
+##################################################################
+#algorithm
+##################################################################
+''' ITERATIVE DIJKSTRA'S ALGORITHM: FINDING SHORTEST PATH AND DISTANCE'''
+#find shortest distances from "start" node to every other node
+def dijkstra_algorithm(main_node):
+    #repeat until priority queue empty
+    
+        
+    #dictionary for outgoing adjacent nodes and edges
+    node_dictionary={}
+    
+     # getmin for lowest distance node from starting node
+    searched.add(main_node) # mark node
+    main_edges=main_node.outgoing_edges() # list of outgoing edges
+    
+    #for each outgoing edge,add to dictionary key:node, item:edge
+    for edge in main_edges:
+        node_dictionary[edge.target()]=edge
+    
+    #for each outgoing adjacent node 
+    for node in node_dictionary:
+        
+        #find edge weighting and distance of the outgoing adjacent node
+        edge_weight=node_dictionary[node].weight()
+        new_weight=main_node.attribute("weight")+edge_weight
+        
+        #only update node distance if new_weight less than current distance
+        if node.attribute("weight")=="∞" or new_weight<node.attribute("weight"):
+            node.set_attribute("weight",new_weight)
+            heapq.heappush(node_distance,[new_weight,node]) # append with new_weight and node
+            
+        else:
+            heapq.heappush(node_distance,(edge_weight,node)) # append node with current distance
+            
+    #peek next item in priority queue, pop it if it has been searched
+    for n in range(len(node_distance)):
+        if node_distance[0][1] in searched:
+            heapq.heappop(node_distance)
+
+def dijkstra(start):
+    searched=set() # "set" adt to keep track of marked nodes
+    node_distance=[]
+    heapq.heapify(node_distance) #Priority queue to get next node with lowest distance from starting node
+
+    #Set distance of every node to infinity
+    for node in graph.nodes():
+        node.set_attribute("weight","∞")
+    start.set_attribute("weight",0) # starting node has distance 0
+
+    heapq.heappush(node_distance,(0,start)) #append array/python tuple of size 2 (distance,node)
+    while not len(node_distance)==0:
+        main_node=heapq.heappop(node_distance)[1]
+        dijkstra_algorithm(main_node)
+'''search for shortest path after dijkstra's
+Start from the node which we are finding the shortest path to
+Recursively append the lowest distance incoming adjacent node to a list "path"
+Stop recursion when the starting node is reached or the node of weight 0 is found
+This will not work with negative edges, however dijkstra's would not have been used anyway if this was the case
+'''
+def reverse_search(last):
+    
+    if last.attribute("weight") != 0: # stop recursion when node of weight 0 found
+        neighbours=last.predecessor_nodes() # incoming directed nodes
+        weighting_PQ=[]
+        heapq.heapify(weighting_PQ) #Priority queue of incoming adjacent nodes
+        
+        # append each incoming neighbour node to a priority queue
+        for neighbour in neighbours:
+            heapq.heappush(weighting_PQ, (neighbour.attribute("weight"),neighbour)) #append an array of size 2 to priority queue in the form: (distance from starting node, node)
+            
+        #serve priority queue to find shortest distance neighbour and apply recursive function with the served node
+        node=heapq.heappop(weighting_PQ)
+        path.insert(0,node[1]) # push node to path stack
+        reverse_search(node[1])
+
+
+'''
+function to first use dikstra to initialise shortest distances from the "first" node to "last"
+Then find the shortest path using shortest_path function
+return an array of size 2 with the shortest path with its corresponding distance
+'''
+def path_distance(first,last):
+    path=[last]
+    dijkstra(first) # perform dijkstra's algorithm to intialise weighting attributes for every node's shortest distance from first
+    reverse_search(last)  # perform algorithm to find shortest path from first to last by starting at last and build path stack
+    node_distance = last.attribute("weight") # get lowest path cost from first to last
+    return [path, node_distance]
+
+##################################################################    
+'''CREATING AND FORMATTING PERMUTATIONS OF POKEMON/REGION ORDER'''
+
+#function to divide each permutation of nodes into multiple arrays of a starting node and ending node 
+def path_divide(node_permutation):
+    two_node_path=Queue() 
+    
+    if len(node_permutation)==1: # if there is only one node, push it into the queue
+        two_node_path.put(node_permutation)
+    
+    #when more than 1 node, push pairs of nodes e.g (a,b,c)->[(a,b),(b,c)]
+    else:
+        for n in range(len(node_permutation)-1): 
+            two_node_path.put([node_permutation[n],node_permutation[n+1]]) 
+    
+    return two_node_path #return queue of pairs of nodes
+
+
+#function to permute then path divide
+def list_queue(node_list):
+    permuted=permutations(node_list,len(node_list)) # permute the list of nodes
+    queue_list=[] # list of queues of pairs of nodes
+    for node_combination in permuted: #for every node permutation, append the path_divided list to queue_list
+        queue_list.append(path_divide(node_combination))
+
+    return queue_list
+##################################################################       
+'''IMPLEMENTING FUNCTIONS INTO ONE FUNCTION TO FIND SHORTEST PATH'''    
+
+# input a list of pokemon to find shortest path
+def possible_shortest_paths(pokemon):
+    queues=list_queue(pokemon)  # a list of queues of pairs of inputted pokemon
+    final=[]
+    
+    for pokemon_pair_queue in queues: #for each queue with a series of pairs of nodes
+        path_weight=[] # list of shortest paths between pairs of nodes and their corresponding weights
+        
+        '''
+        for each pair of nodes, 
+            find the shortest path with its corresponding length
+        repeat until the queue of pairs of nodes is empty
+        '''
+        while not pokemon_pair_queue.empty(): 
+            nodes=pokemon_pair_queue.get()
+            if len(nodes)==1:
+                path_weight.append([[nodes[0]],0])
+            else:
+                path_weight.append(path_distance(nodes[0],nodes[1]))
+    
+        final.append(path_weight) 
+        
+    # return a list of node permutations
+    #each node permutation is a list of paths to get between each node and its corresponding weight
+    return final 
+
+#function to find the shortest path between every node using information of the shortest path between a pair of nodes
+def shortest(object_list):
+    
+    all_path=PriorityQueue() # create priority queue to sort by path length 
+    
+    #for each node permutation list 
+    for all_node_path in object_list:
+        
+        home_to_first=path_distance(starting_node,all_node_path[0][0][0])
+        all_node_path.insert(0,[home_to_first])
+        path=home_to_first[0]#all_node_path[0][0] 
+        length=home_to_first[1]#all_node_path[0][1]
+        
+        '''for every other node pair path other than the first and last
+                append the nodes that cokect the two nodes and its path length
+                however do not include the starting node otherwise this will double up
+                    e.g [(fire,rock),(rock,electric)] appending every node will cause 2 rocks
+        '''
+        
+        
+        for two_node_path in all_node_path[1:-1]:
+            
+            path.extend(two_node_path[0][1:])
+            length+=two_node_path[1]
+
+        #if there are more than 2 nodes to locate then append the last node path pair and its length
+        #otherwise it will double up 
+        if len(all_node_path) != 1:
+            
+            path.extend(all_node_path[-1][0][1:])
+            length+=all_node_path[-1][1]
+            
+        end_to_home=path_distance(all_node_path[-1][0][-1],starting_node)
+      
+        path.extend(end_to_home[0][1:])
+        length+=end_to_home[1]
+        
+        #store the final path and its length to a queue, the queue will sort for the smallest length path
+        all_path.put([length,path])
+   
+    return all_path.get() #return the shortest path and its length
+
+##################################################################
+#generate graph
+##################################################################
+
+def graph_generate(pokemon_list):
+    
+    #array of nodes and list of edges in new graph
+    pokemon_edges=[]
+    pokemon_nodes=[]
+    pairs = set() #create set for pairs of pokemon to create edge between, to not create excate same edge
+    random.shuffle(pokemon_list)
+    
+    #insert each pokemon to list of nodes
+    pokemon_nodes.extend(pokemon_list)
+
+    #create edge between each successive node in array to ensure graph is strongly cokected
+    for a in range(len(pokemon_nodes)-1):
+        pairs.add(tuple((pokemon_nodes[a],pokemon_nodes[a+1],random.randint(5,8)))) 
+
+    pairs.add(tuple((pokemon_nodes[-1],pokemon_nodes[0],random.randint(5,8)))) 
+    
+    # ensure each node has a incoming and outgoing edge, to prevent dead ends at nodes
+    for a in range(len(pokemon_nodes)):
+        # list of numbers from 0 to length of nodes not including a
+        
+        
+        pairs.add(tuple((pokemon_nodes[a],pokemon_nodes[random.randint(0,len(pokemon_nodes)-1)],random.randint(1,3))))
+    for a in range(len(pokemon_nodes)//2):
+        pairs.add(tuple((pokemon_nodes[random.randint(0,len(pokemon_nodes)-1)],pokemon_nodes[random.randint(0,len(pokemon_nodes)-1)],random.randint(1,8))))
+    
+    '''
+    while len(pairs) < n:
+        pair=sorted(random.sample(pokemon_list, 2))
+
+        if pair[0] != pair[1] :
+        
+
+    '''
+    # Add edges to edge list
+    for pair in pairs:
+        pokemon_edges.append([pair[0], pair[1],pair[2]])
+    return [pokemon_nodes,pokemon_edges] # return list of node array and edge list
+
+
+#create list of nodes and edges for each region
+bug_all=graph_generate(random.sample(["Paras","Parasect","Weedle","Kakuna","Beedrill","Venonat","Venomoth","Caterpie","Metapod","Pinsir"],random.randint(7,10)))
+electric_all=graph_generate(random.sample(["Pikachu","Raichu","Voltorb","Electrode","Electabuzz","Jolteon","Zapdos","Magnemite","Magneton"],random.randint(7,9)))
+fighting_all=graph_generate(random.sample(["Mankey","Primeape","Machop","Machoke","Machamp","Hitmonlee","Hitmonchan"],random.randint(6,7)))
+fire_all=graph_generate(random.sample(["Charmander","Charmeleon","Vulpix","Ninetales","Growlithe","Arcanine","Ponyta","Rapidash","Magmar","Flareon"],random.randint(7,10)))
+grass_all=graph_generate(random.sample(["Bulbasaur","Ivysaur","Venusaur","Oddish","Gloom","Vileplume","Bellsprout","Weepinbell","Victreebel"],random.randint(7,9)))
+ground_all=graph_generate(random.sample(["Nidoqueen","Nidoking","Rhyhorn","Rhydon","Sandshrew","Sandslash","Diglett","Dugtrio","Cubone","Marowak"],random.randint(7,10)))
+normal_all=graph_generate(random.sample(["Rattata","Raticate","Clefairy","Clefable","Jigglypuff","Wigglytuff","Meowth","Persian","Lickitung","Chansey","Kangaskhan","Tauros","Ditto","Eevee","Porygon","Snorlax"],random.randint(7,15)))
+poison_all=graph_generate(random.sample(["Ekans","Arbok","Nidoran ♀","Nidorina","Nidoran ♂","Nidorino","Grimer","Muk","Koffing","Weezing"],random.randint(7,10)))
+psychic_all=graph_generate(random.sample(["Slowpoke","Slowbro","Starmie","Abra","Kadabra","Alakazam","Drowzee","Hypno","Mr. Mime","Mewtwo","Mew"],random.randint(7,11)))
+water_all=graph_generate(random.sample(["Squirtle","Wartortle","Blastoise","Psyduck","Golduck","Poliwag","Poliwhirl","Seel","Shellder","Krabby","Kingler","Horsea","Seadra","Goldeen","Seaking","Staryu","Magikarp","Vaporeon"],random.randint(7,15)))
+rock_all=graph_generate(random.sample(["Geodude","Graveler","Golem","Onix","Omanyte","Omastar","Kabuto","Kabutops"],random.randint(6,8)))
+flying_all=graph_generate(random.sample(["Scyther","Dragonite","Charizard","Moltres","Articuno","Pidgey","Pidgeotto","Pidgeot","Spearow","Fearow","Farfetch'd","Doduo","Dodrio","Zubat","Golbat","Aerodactyl","Gyarados"],random.randint(7,15)))
+other_all=graph_generate(random.sample(["Dratini","Dragonair","Gastly","Haunter","Gengar","Exeggcute","Exeggutor","Tangela","Jynx","Poliwrath","Dewgong","Cloyster","Lapras","Tentacool","Tentacruel"],random.randint(7,14)))
+pokemon_all=["Dratini","Dragonair","Gastly","Haunter","Gengar","Exeggcute","Exeggutor","Tangela","Jynx","Poliwrath","Dewgong","Cloyster","Lapras","Tentacool","Tentacruel","Paras","Parasect","Weedle","Kakuna","Beedrill","Venonat","Venomoth","Caterpie","Metapod","Pinsir","Pikachu","Raichu","Voltorb","Electrode","Electabuzz","Jolteon","Zapdos","Magnemite","Magneton","Mankey","Primeape","Machop","Machoke","Machamp","Hitmonlee","Hitmonchan","Charmander","Charmeleon","Vulpix","Ninetales","Growlithe","Arcanine","Ponyta","Rapidash","Magmar","Flareon","Bulbasaur","Ivysaur","Venusaur","Oddish","Gloom","Vileplume","Bellsprout","Weepinbell","Victreebel","Nidoqueen","Nidoking","Rhyhorn","Rhydon","Sandshrew","Sandslash","Diglett","Dugtrio","Cubone","Marowak","Rattata","Raticate","Clefairy","Clefable","Jigglypuff","Wigglytuff","Meowth","Persian","Lickitung","Chansey","Kangaskhan","Tauros","Ditto","Eevee","Porygon","Snorlax","Ekans","Arbok","Nidoran ♀","Nidorina","Nidoran ♂","Nidorino","Grimer","Muk","Koffing","Weezing","Slowpoke","Slowbro","Starmie","Abra","Kadabra","Alakazam","Drowzee","Hypno","Mr. Mime","Mewtwo","Mew","Squirtle","Wartortle","Blastoise","Psyduck","Golduck","Poliwag","Poliwhirl","Seel","Shellder","Krabby","Kingler","Horsea","Seadra","Goldeen","Seaking","Staryu","Magikarp","Vaporeon","Geodude","Graveler","Golem","Onix","Omanyte","Omastar","Kabuto","Kabutops","Scyther","Dragonite","Charizard","Moltres","Articuno","Pidgey","Pidgeotto","Pidgeot","Spearow","Fearow","Farfetch'd","Doduo","Dodrio","Zubat","Golbat","Aerodactyl","Gyarados"]
+##################################################################
+#GRAPH NAVIGATION
+##################################################################
+
+#dictionary with key:region name, value:list of edges and nodes in specified region
+region_dictionary={"Other":other_all,"Flying":flying_all,"Bug":bug_all,"Electric":electric_all,"Fighting":fighting_all,"Fire":fire_all,"Grass":grass_all,"Ground":ground_all,"Normal":normal_all,"Poison":poison_all,"Psychic":psychic_all,"Water":water_all,"Rock":rock_all,"RETURN TO REGION":region_all}
+
+#button to return to region graph
+return_button=Node("RETURN TO REGION")
+return_button.set_position(200,200)
+return_button.set_value_style(size=30, color=Color.WHITE, outline=Color.BLACK)
+generated=False
+#function to transition between region graph and pokemon graphs
+def graph_generate(region):
+    
+    graph.clear()
+    if region=="RETURN TO REGION":
+        graph.add_all(region_all)
+        rock.set_position(560,190)  
+        electric.set_position(900,125)
+        water.set_position(700,150)
+        fire.set_position(600,300)
+        fighting.set_position(675,650)
+        normal.set_position(800,300)
+        psychic.set_position(675,400)
+        grass.set_position(400,350)
+        poison.set_position(550,350)
+        bug.set_position(600,225)
+        ground.set_position(1000,300)
+        flying.set_position(550,125)
+        other.set_position(900,220)
+    else: 
+        [node1,edge1] =region_dictionary[region]
+        everything=[]
+        for node2 in node1:
+            everything.append(node2)
+        for n1,n2,w in edge1:
+            everything.append(Edge(n1,n2,weight=w,directed=True))
+        
+        graph.add_all(everything) # display the selected graph
+        graph.add_node(return_button)
+    #only add button if the selected node is not the button itself
+        
+    if generated==True:
+        if region== "RETURN TO REGION":
+            if len(region_path_length[1])==1 and region_path_length[1][0] in region_starting_node:
+                graph.node(find_dictionary[region][0]).set_color(color=Color.RED)
+            else:
+                search_set=[]
+                path_traverse=[]
+                for n in list(find_dictionary):
+                    search_set.append(graph.node(n))
+                animate(region_path_length,search_set)
+        if region in set(path_dictionary):
+            if len(find_dictionary[region])==1 and find_dictionary[region][0] in starting_pokemons:                
+                graph.node(find_dictionary[region][0]).set_color(color=Color.RED)
+            else:
+                search_set=[]
+                path_traverse=[]
+                for n in pokemon_list:
+                    search_set.append(graph.node(n))
+                for n in path_dictionary[region][1]:
+                    path_traverse.append(graph.node(n))
+                animate([0,path_traverse],search_set)
+        
+    
+#function to allow for clicking
+def region_button(node):
+    region=node.value() # get the region clicked on
+    if generated==True:
+        #only change graph if the clicked node is a region or return_button
+        if region in region_set or region=="RETURN TO REGION":
+            graph_generate(region) # input the node clicked to "graph_generate"
+    
+#built in pynode function to allow for clicking
+register_click_listener(region_button)
+
+##################################################################
+#RECURSIVE DFS
+##################################################################
+
+def dfs_algorithm(node):
+    #mark current node and add to found pokemon
+    visited.add(node)
+    pokemon.add(node.id())
+    
+    #put each unmarked neighbour of current node into the stack
+    for neighbor in node.successor_nodes():
+        if neighbor not in visited:
+            stack.put(neighbor)
+    #base case for recursion, stops recursion if stack is empty
+    if not stack.empty():
+        #get next node in stack, inputting into the recursion
+        next_node = stack.get()
+        dfs_algorithm(next_node)
+
+
+def dfs(start_node): 
+    
+    #set for visited nodes and pokemon found
+    visited = set()
+    pokemon=set()
+    
+    #initialise a stack with starting node
+    stack = LifoQueue()
+    stack.put(start_node)
+
+    dfs_algorithm(start_node)
+    
+    return pokemon #return the pokemon found
+
+#function to search a list of regions
+def region_search(regions):
+    pokemon_dictionary={} #create pokemon dictionary to record locations of each pokemon
+    
+    '''
+    for each region inputted
+        generate the graph
+        begin at a random node in graph other than button
+        append region and its pokemon to pokemon_dictionary
+    '''
+    for region in regions:
+        graph_generate(region)
+        all_nodes=graph.nodes()
+        all_nodes.remove(graph.node("RETURN TO REGION"))
+        pokemon_dictionary[region]=dfs(random.choice(all_nodes))
+        
+    #restore region graph
+    graph_generate("RETURN TO REGION")
+
+    return pokemon_dictionary
+    
+pokemon_dictionary=region_search(region_list)
+##################################################################
+#animate
+##################################################################
+
+def animate(shortest_distance_node,searching):
+    global final_length
+    pause(Pause)
+    for n in range(len(shortest_distance_node[1])-1):
+        edge_pq=[]
+        heapq.heapify(edge_pq)
+
+        # if this is the first node in the path, set its color to blue
+        if n ==0:
+            shortest_distance_node[1][n].set_color(color=Color.BLUE)
+        edge=graph.edges_between(shortest_distance_node[1][n], shortest_distance_node[1][n+1], directed=True)
+        
+        # find the edge between the current node and the next node in the path
+        for e in edge:
+            heapq.heappush(edge_pq,[e.weight(),e])
+
+        [weighting,shortest_edge]=heapq.heappop(edge_pq)
+        final_length+=weighting
+        #traverse the edge from the initial node
+        shortest_edge.traverse(initial_node=shortest_edge.source(), color=Color.BLACK, keep_path=True)
+        if shortest_distance_node[1][n+1] in searching and shortest_distance_node[1][n+1]!=shortest_distance_node[1][0]:
+            
+            shortest_distance_node[1][n+1].set_color(color=Color.RED)
+        elif shortest_distance_node[1][n+1]!=shortest_distance_node[1][0]:
+            shortest_distance_node[1][n+1].set_color(color=Color.BLACK)
+        pause(Pause)
+
+findable_pokemon=[]
+for key in pokemon_dictionary:
+    findable_pokemon.extend(pokemon_dictionary[key])
+pokemon_list=random.sample(findable_pokemon,Number_of_Pokemon)
+##################################################################
+#CHOOSE POKEMON
+##################################################################
+'''INPUT POKEMON'''
+
+print(f'Finding: {pokemon_list}')
+path_dictionary={}
+# dictionary of locations of 6 pokemon
+find_dictionary={}
+for region in list(pokemon_dictionary): 
+    for catch_pokemon in pokemon_list: 
+
+        if catch_pokemon in pokemon_dictionary[region]: # if the pokemon is present in region
+
+            #sort pokemon into region dictionary
+            if region in find_dictionary: #if the region key already exists, append pokemon to list
+                find_dictionary[region].append(catch_pokemon)
+                
+            else: # if the region key has not been created, create one with key:region, value:list(pokemon)
+                find_dictionary[region]=[catch_pokemon]
+
+
+##################################################################
+#evaluating shortest path for each region subgraph to each pokemon
+##################################################################
+
+main_nodes=set() # set nodes being found
+starting_pokemons=set() # set of random starting nodes
+
+#find shortest path for each region subgraph to each pokemon
+for region in find_dictionary:
+    region_pokemon=[]
+    pokemon_id_list=[]
+    graph_generate(region)
+    
+    starting_node=graph.node(random.choice(list(pokemon_dictionary[region]))) # random "home" node
+    starting_pokemons.add(starting_node.id()) # add "home" node to set of homes
+
+    #add node objects to list of region pokemon and set of nodes being found
+    for finding_pokemon in find_dictionary[region]:
+        region_pokemon.append(graph.node(finding_pokemon))
+        main_nodes.add(finding_pokemon)
+
+    #find shortest path for pokemon subgraph
+    pokemon_path=shortest(possible_shortest_paths(region_pokemon))
+
+    #convert node objects in path to strings so that graph can be cleared and remade
+    for l in pokemon_path[1]:
+        pokemon_id_list.append(l.id())
+    
+    #add key:region, value:[length,path] to dictionary of pokemon paths
+    path_dictionary[region]=[pokemon_path[0],pokemon_id_list]
+
+##################################################################
+#evaluating shortest path between required regions
+##################################################################
+
+pause(Pause)
+exploring_region=[]
+graph_generate("RETURN TO REGION")
+pause(Pause)
+
+#find shortest path between required regions
+for region in list(find_dictionary):
+    exploring_region.append(graph.node(region))
+    main_nodes.add(graph.node(region))
+
+starting_node=graph.node(random.choice(region_list)) # random "home" node for region graph
+region_starting_node=starting_node
+region_path_length=shortest(possible_shortest_paths(exploring_region)) # shortest path and length between each required region
+
+region_path=region_path_length[1] # path for region graph
+
+##################################################################
+#animate complete path
+##################################################################
+
+coloured=[] # nodes that have been coloured
+notmain=[] # nodes part of the path
+path_edges=[] #edges that have been coloured
+pause(Pause)
+print(find_dictionary)
+
+been=set() # visited regions
+final_path=[]
+final_length=0
+
+#animate complete path
+if len(region_path)>1: 
+    for k in range(len(region_path)-1):
+        pause(Pause)
+        region_path_length[1][0].set_color(color=Color.BLUE) # set "home" node as blue
+        final_path.append(region_path[k].id()) # append current node to path list to be printed
+
+        if region_path[k] in main_nodes: # if region node contains pokemon to be catched
+            main_nodes.remove(region_path[k]) # prevent node to explore same region multiple times
+            been.add(region_path[k])
+            region_path[k].set_color(color=Color.RED)
+            region_path[k].highlight(color=Color.RED, size=region_path[k].size()*3)
+            
+            #add node to coloured list if it is not the first node
+            if region_path[k]!=region_path_length[1][0]:
+                coloured.append(region_path[k].id())
+            pause(Pause*3)
+
+            graph_generate(region_path[k].id()) # generate region subgraph
+
+            #a case if the length of path in subgraph is 1, colour the one node
+            if len(path_dictionary[region_path[k].id()][1]) ==1:
+                graph.node(path_dictionary[region_path[k].id()][1][0]).highlight(color=Color.RED, size=50)
+            
+            #convert lists of pokemon strings to lists of pokemon node objects
+            pokemon_nodes=[]
+            for p in path_dictionary[region_path[k].id()][1]:
+                pokemon_nodes.append(graph.node(p))
+                final_path.append(p)
+            search_set=[]
+            for n in pokemon_list:
+                search_set.append(graph.node(n))
+            
+            #animate traversal of region subgraph animate([length,path],pokemon to catch)
+            animate([path_dictionary[region_path[k].id()][0],pokemon_nodes],search_set)
+            pause(Pause*3)
+            graph_generate("RETURN TO REGION")
+
+            #recolour nodes after generating region main graph
+            for region_node in notmain:
+                graph.node(region_node).set_color(color=Color.BLACK)
+            for region_node in coloured:
+                graph.node(region_node).set_color(color=Color.RED)
+        
+        #if current node does not contain pokemon to be catched and is not the starting node, colour the node black
+        elif region_path[k] != region_starting_node and not region_path[k] in been:
+            notmain.append(region_path[k].id())
+            region_path[k].set_color(color=Color.BLACK)
+
+        #recolour path edges
+        for x in path_edges:
+            region_edge=graph.edges_between(graph.node(x[0]),graph.node(x[1]),directed=True)
+            region_edge[0].set_color(color=Color.BLACK)
+
+        
+        path_edges.append((region_path_length[1][k].id(),region_path_length[1][k+1].id())) #add next edge to be traversed to path edge list
+    
+        #traverse next edge in region path
+        edge=graph.edges_between(region_path_length[1][k], region_path_length[1][k+1], directed=True)
+        edge[0].traverse(initial_node=edge[0].source(), color=Color.BLACK, keep_path=True)
+
+        final_length+=edge[0].weight() #increase overall path length by weight of edge traversed
+        pause(Pause)
+    
+    final_path.append(region_path[-1].id()) #append last edge which was skipped due to len(region_path)-1
+    
+        
+        
+else: # a case where only one region node is to be explored ("home" node is also the only node of interest), no edges will need to be traversed
+    final_path.append(region_path_length[1][0].id()) #add the one region to final_path list
+    region_path_length[1][0].set_color(color=Color.BLUE) #set the region node to BLUE
+
+    if region_path[0] in main_nodes: 
+        region_path[0].highlight(color=Color.RED, size=region_path[0].size()*3)
+        pause(Pause)
+        #if len(find_dictionary[region_path_length[1][k]])==1:
+        graph_generate(region_path[0].id())
+        
+        # a case if the length of path in subgraph is 1, colour the one node
+        if len(path_dictionary[region_path[0].id()][1]) ==1:
+            graph.node(path_dictionary[region_path[0].id()][1][0]).highlight(color=Color.RED, size=36)
+        
+        
+        #convert lists of pokemon strings to lists of pokemon node objects
+        pokemon_nodes=[]
+        for p in path_dictionary[region_path[0].id()][1]:
+            pokemon_nodes.append(graph.node(p))
+        search_set=[]
+        for n in pokemon_list:
+            search_set.append(graph.node(n))
+            final_path.append(n)
+
+        #animate catching pokemon in subgraph animate([length,path],pokemon to catch)
+        animate([path_dictionary[region_path[0].id()][0],pokemon_nodes],[graph.node(pokemon_list[0])])
+        pause(Pause)
+        graph_generate("RETURN TO REGION")
+
+generated=True
+print(f'Length: {final_length} Minutes\nPath: {final_path}')
+
+
